@@ -17,6 +17,20 @@
                     width: 100%;
                 }
             }
+
+            .is-invalid {
+                border-color: #dc3545 !important;
+            }
+            
+            .invalid-feedback {
+                color: #dc3545;
+                font-size: 0.875em;
+                display: none;
+            }
+            
+            .is-invalid ~ .invalid-feedback {
+                display: block;
+            }
         </style>
     </head>
 <body>
@@ -41,43 +55,54 @@
                 <div class="col-md-6">
                     <label for="firstName" class="form-label">First Name<span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="firstName" required>
+                    <div class="invalid-feedback">This field is required</div>
                 </div>
                 <div class="col-md-6">
                     <label for="lastName" class="form-label">Last Name<span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="lastName" required>
+                    <div class="invalid-feedback">This field is required</div>
                 </div>
                 <div class="col-md-6">
                     <label for="email" class="form-label">Email<span class="text-danger">*</span></label>
                     <input type="email" class="form-control" id="email" required>
+                    <div class="invalid-feedback">This field is required</div>
                 </div>
                 <div class="col-md-6">
                     <label for="mobile" class="form-label">WhatsApp Number<span class="text-danger">*</span></label>
                     <input type="tel" class="form-control" id="mobile" required>
+                    <div class="invalid-feedback">This field is required</div>
                 </div>
                 <div class="col-md-6">
                     <label for="jobTitle" class="form-label">Job Title<span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="jobTitle" required>
+                    <div class="invalid-feedback">This field is required</div>
                 </div>
                 <div class="col-md-6">
                     <label for="company" class="form-label">Company/Organization<span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="company" required>
+                    <div class="invalid-feedback">This field is required</div>
                 </div>
                 <div class="col-md-6">
                     <label for="city" class="form-label">City<span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="city" required>
+                    <div class="invalid-feedback">This field is required</div>
                 </div>
                 <div class="col-md-6">
                     <label for="country" class="form-label">Country<span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="country" required>
+                    <div class="invalid-feedback">This field is required</div>
                 </div>
             </div>
             <button type="submit" class="btn btn-primary mt-4">Register</button>
         </form>
 
         <div id="qrCodeContainer" class="mt-4 text-center d-none">
-            <h2>Your QR Code</h2>
-            <div id="qrcode"></div>
-            <button class="btn btn-info mt-3" onclick="window.print()">Print QR Code</button>
+            <h2>Your Registration QR Code</h2>
+            <div id="qrcode" class="mb-3"></div>
+            <p class="text-muted">Scan this code to verify your registration</p>
+            <button class="btn btn-info mt-3" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print QR Code
+            </button>
         </div>
     </div>
 
@@ -118,40 +143,10 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <script>
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const form = document.getElementById('registrationForm');
-            const qrCodeContainer = document.getElementById('qrCodeContainer');
-            const qrcodeDiv = document.getElementById('qrcode');
-
-            form.addEventListener('submit', function (event) {
-                event.preventDefault();
-
-                const formData = {
-                    firstName: document.getElementById('firstName').value,
-                    lastName: document.getElementById('lastName').value,
-                    email: document.getElementById('email').value,
-                    mobile: document.getElementById('mobile').value,
-                    jobTitle: document.getElementById('jobTitle').value,
-                    company: document.getElementById('company').value,
-                    city: document.getElementById('city').value,
-                    country: document.getElementById('country').value,
-                };
-
-                let allRegistrants = JSON.parse(localStorage.getItem('allRegistrants')) || [];
-                allRegistrants.push(formData);
-                localStorage.setItem('allRegistrants', JSON.stringify(allRegistrants));
-
-                // Generate QR code (same as before, likely based on the current submission)
-                qrcodeDiv.innerHTML = '';
-                const qrcode = new QRCode(qrcodeDiv, { text: JSON.stringify(formData), width: 256, height: 256, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L });
-
-                
-            });
-        });
-
+        
     </script>
     <script src="assets/js/script.js"></script>
 </body>
