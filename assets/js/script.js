@@ -3,9 +3,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const qrCodeContainer = document.getElementById('qrCodeContainer');
     const qrcodeDiv = document.getElementById('qrcode');
 
-    form.addEventListener('submit', function (event) {
+    form.addEventListener('submit', async function (event) {
         event.preventDefault();
 
+        // 1. Collect form data
         const formData = {
             firstName: document.getElementById('firstName').value,
             lastName: document.getElementById('lastName').value,
@@ -15,23 +16,25 @@ document.addEventListener('DOMContentLoaded', function () {
             company: document.getElementById('company').value,
             city: document.getElementById('city').value,
             country: document.getElementById('country').value,
+            registrationDate: new Date().toISOString()
         };
 
-        // Construct the URL with registrant details as parameters
-        const detailsUrl = `registrant_details.html?firstName=${encodeURIComponent(formData.firstName)}&lastName=${encodeURIComponent(formData.lastName)}&email=${encodeURIComponent(formData.email)}&mobile=${encodeURIComponent(formData.mobile)}&jobTitle=${encodeURIComponent(formData.jobTitle)}&company=${encodeURIComponent(formData.company)}&city=${encodeURIComponent(formData.city)}&country=${encodeURIComponent(formData.country)}`;
+        // 2. Generate a secure ID (instead of exposing data in URL)
+        const userId = Math.random().toString(36).substring(2, 10);
+        localStorage.setItem(userId, JSON.stringify(formData));
 
-        qrcodeDiv.innerHTML = '';
-        const qrcode = new QRCode(qrcodeDiv, {
-            text: detailsUrl, // Encode the URL in the QR code
-            width: 256,
-            height: 256,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.L
-        });
+        // 3. Save to admin list
+        let allRegistrants = JSON.parse(localStorage.getItem('allRegistrants')) || [];
+        allRegistrants.push({ ...formData, id: userId });
+        localStorage.setItem('allRegistrants', JSON.stringify(allRegistrants));
 
+        // 4. Generate QR Code using QRCode Monkey
+        const detailsUrl = `${window.location.origin}/registrant_details.html?id=${userId}`;
+        const qrCodeUrl = `https://api.qrcode-monkey.com/qr/custom?size=300&data=${encodeURIComponent(detailsUrl)}`;
+
+        // 5. Display QR Code
+        qrcodeDiv.innerHTML = `<img src="${qrCodeUrl}" alt="QR Code" class="img-fluid">`;
         qrCodeContainer.classList.remove('d-none');
         form.classList.add('d-none');
-        alert('Registration successful! Scan the QR code to view your details.');
     });
 });
