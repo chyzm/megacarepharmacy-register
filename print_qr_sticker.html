@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        #qrcode { /* Adjust styles for 80mm sticker width */ width: 76mm; height: auto; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body onload="window.print()">
+    <div id="qrcode"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const registrantDataString = urlParams.get('data');
+
+            if (registrantDataString) {
+                const registrantData = JSON.parse(registrantDataString);
+                const qrcodeDiv = document.getElementById('qrcode');
+                new QRCode(qrcodeDiv, {
+                    text: JSON.stringify(registrantData),
+                    width: 300, // Adjust width as needed for the sticker
+                    height: 300, // Adjust height as needed
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.L
+                });
+            } else {
+                document.body.innerHTML = '<p>No data to generate QR code.</p>';
+            }
+        });
+    </script>
+</body>
+</html>

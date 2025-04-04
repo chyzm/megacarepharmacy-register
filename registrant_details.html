@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrant Details</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .detail-item { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .detail-label { font-weight: bold; margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Registrant Information</h1>
+    <div id="details-container">
+        </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const detailsContainer = document.getElementById('details-container');
+
+            const firstName = urlParams.get('firstName');
+            const lastName = urlParams.get('lastName');
+            const email = urlParams.get('email');
+            const mobile = urlParams.get('mobile');
+            const jobTitle = urlParams.get('jobTitle');
+            const company = urlParams.get('company');
+            const city = urlParams.get('city');
+            const country = urlParams.get('country');
+
+            if (firstName) {
+                detailsContainer.innerHTML = `
+                    <div class="detail-item"><span class="detail-label">First Name:</span> ${firstName}</div>
+                    <div class="detail-item"><span class="detail-label">Last Name:</span> ${lastName}</div>
+                    <div class="detail-item"><span class="detail-label">Email:</span> ${email}</div>
+                    <div class="detail-item"><span class="detail-label">WhatsApp:</span> ${mobile}</div>
+                    <div class="detail-item"><span class="detail-label">Job Title:</span> ${jobTitle}</div>
+                    <div class="detail-item"><span class="detail-label">Company:</span> ${company}</div>
+                    <div class="detail-item"><span class="detail-label">City:</span> ${city}</div>
+                    <div class="detail-item"><span class="detail-label">Country:</span> ${country}</div>
+                `;
+            } else {
+                detailsContainer.innerHTML = '<p>No registrant details found.</p>';
+            }
+        });
+    </script>
+</body>
+</html>
