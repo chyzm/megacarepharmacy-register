@@ -99,7 +99,7 @@
         </div>
     </div>
 
-    // Replace the entire script section with:
+    
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const urlParams = new URLSearchParams(window.location.search);
@@ -128,7 +128,44 @@
                     <span class="detail-label">First Name:</span>
                     <span class="detail-value">${registrantData.firstName || 'Not provided'}</span>
                 </div>
-                <!-- Keep all other detail items the same -->
+                <div class="detail-item">
+                    <span class="detail-label">First Name:</span>
+                    <span class="detail-value">${registrantData.lastName || 'Not provided'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">First Name:</span>
+                    <span class="detail-value">${registrantData.email || 'Not provided'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">First Name:</span>
+                    <span class="detail-value">${registrantData.mobile || 'Not provided'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">First Name:</span>
+                    <span class="detail-value">${registrantData.jobTitle || 'Not provided'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">First Name:</span>
+                    <span class="detail-value">${registrantData.company || 'Not provided'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">First Name:</span>
+                    <span class="detail-value">${registrantData.city || 'Not provided'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">First Name:</span>
+                    <span class="detail-value">${registrantData.country || 'Not provided'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Submission Time:</span>
+                    <span class="detail-value">${
+                        registrantData.submissionTime || 
+                        (registrantData.registrationDate ? 
+                            new Date(registrantData.registrationDate).toLocaleString() : 
+                            'Unknown')
+                    }</span>
+                </div>
+                
             `;
 
             // Generate and display QR code
