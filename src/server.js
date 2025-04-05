@@ -1,10 +1,9 @@
 require('dotenv').config();
 const express = require('express');
-const { Pool } = require('pg');
-const cors = require('cors');
-const bodyParser = require('body-parser');
 const path = require('path');
+const { Pool } = require('pg');
 const app = express();
+const PORT = process.env.PORT || 10000;
 
 // Database connection
 const pool = new Pool({
@@ -13,38 +12,47 @@ const pool = new Pool({
 });
 
 // Middleware
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname,)));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname)));
 
-// Routes
+// API Routes
+
+// 1. Create new registrant
 app.post('/api/registrants', async (req, res) => {
   try {
-    const { 
-      firstName, lastName, email, mobile, 
-      jobTitle, company, city, country 
-    } = req.body;
+    const { firstName, lastName, email, mobile, jobTitle, company, city, country } = req.body;
 
     const result = await pool.query(
       `INSERT INTO registrants (
         first_name, last_name, email, mobile, 
         job_title, company, city, country
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id, created_at`,
       [firstName, lastName, email, mobile, jobTitle, company, city, country]
     );
 
-    res.status(201).json({
+    const registrant = {
       id: `reg-${result.rows[0].id}`,
+      firstName,
+      lastName,
+      email,
+      mobile,
+      jobTitle,
+      company,
+      city,
+      country,
       createdAt: result.rows[0].created_at
-    });
+    };
+
+    res.status(201).json(registrant);
   } catch (error) {
-    console.error(error);
+    console.error('Registration error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+// 2. Get registrant details
 app.get('/api/registrants/:id', async (req, res) => {
   try {
     const id = req.params.id.replace('reg-', '');
@@ -70,11 +78,12 @@ app.get('/api/registrants/:id', async (req, res) => {
       submissionTime: registrant.created_at
     });
   } catch (error) {
-    console.error(error);
+    console.error('Fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+// 3. Get all registrants (for admin)
 app.get('/api/registrants', async (req, res) => {
   try {
     const result = await pool.query(
@@ -95,28 +104,12 @@ app.get('/api/registrants', async (req, res) => {
       registrationDate: row.created_at
     })));
   } catch (error) {
-    console.error(error);
+    console.error('Fetch all error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-app.get('*', (req, res) => {
-    const requestedPage = req.path.split('/').pop();
-    const validPages = [
-      'index.html',
-      'registrant_details.html',
-      'print_qr_sticker.html',
-      'admin.html',
-      'login.html'
-    ];
-    
-    if (validPages.includes(requestedPage)) {
-      res.sendFile(path.join(__dirname, requestedPage));
-    } else {
-      res.status(404).send('Not found');
-    }
-  });
-
+// 4. Delete registrant (admin only)
 app.delete('/api/registrants/:id', async (req, res) => {
   try {
     const id = req.params.id.replace('reg-', '');
@@ -126,17 +119,51 @@ app.delete('/api/registrants/:id', async (req, res) => {
     );
     res.status(204).end();
   } catch (error) {
-    console.error(error);
+    console.error('Delete error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Serve frontend
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Admin authentication
+app.post('/api/auth/login', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.ADMIN_PASSWORD) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ error: 'Invalid credentials' });
+  }
 });
 
-const PORT = process.env.PORT || 3000;
+// Serve HTML files
+const validPages = [
+  'index.html',
+  'registrant_details.html',
+  'print_qr_sticker.html',
+  'admin.html',
+  'login.html'
+];
+
+app.get('*', (req, res) => {
+  const requestedPage = req.path.split('/').pop();
+  
+  if (validPages.includes(requestedPage)) {
+    res.sendFile(path.join(__dirname, requestedPage));
+  } else if (req.path.startsWith('/assets/')) {
+    // Allow asset files to be served
+    res.sendFile(path.join(__dirname, req.path));
+  } else {
+    res.status(404).sendFile(path.join(__dirname, 'index.html'));
+  }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something broke!' });
+});
+
+// Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
