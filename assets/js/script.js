@@ -72,16 +72,20 @@ document.addEventListener('DOMContentLoaded', function() {
         feedbackMessage.textContent = 'Processing your registration...';
     
         try {
-            // For demo using localStorage - replace with your KV storage in production
-            const userId = 'user-' + Math.random().toString(36).substring(2, 10) + '-' + Date.now().toString(36);
+            // Generate a more standardized ID
+            const userId = `reg-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+            
+            // Save to localStorage
             localStorage.setItem(userId, JSON.stringify(formData));
             
+            // Update admin list
             let allRegistrants = JSON.parse(localStorage.getItem('allRegistrants')) || [];
             allRegistrants.push({ ...formData, id: userId });
             localStorage.setItem('allRegistrants', JSON.stringify(allRegistrants));
-    
-            const vercelUrl = "https://megacarepharmacy-register.vercel.app/";
-            const detailsUrl = `${vercelUrl}registrant_details.html?id=${userId}`;
+        
+            // Generate QR Code URL
+            const vercelUrl = "https://megacarepharmacy-register.vercel.app";
+            const detailsUrl = `${vercelUrl}/registrant_details.html?id=${userId}`;
             const qrCodeUrl = `https://api.qrcode-monkey.com/qr/custom?size=300&data=${encodeURIComponent(detailsUrl)}`;
             
             globalDownloadLink = document.createElement('a');
