@@ -1,3 +1,5 @@
+const API_BASE_URL = window.location.origin;
+
 let globalDownloadLink;
 
 function triggerDownload() {
@@ -62,8 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
             jobTitle: document.getElementById('jobTitle').value.trim(),
             company: document.getElementById('company').value.trim(),
             city: document.getElementById('city').value.trim(),
-            country: document.getElementById('country').value.trim(),
-            registrationDate: new Date().toISOString()
+            country: document.getElementById('country').value.trim()
         };
     
         submitBtn.disabled = true;
@@ -72,20 +73,24 @@ document.addEventListener('DOMContentLoaded', function() {
         feedbackMessage.textContent = 'Processing your registration...';
     
         try {
-            // Generate a more standardized ID
-            const userId = `reg-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+            // Send registration data to server
+            const response = await fetch(`${API_BASE_URL}/api/registrants`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
             
-            // Save to localStorage
-            localStorage.setItem(userId, JSON.stringify(formData));
+            if (!response.ok) {
+                throw new Error('Registration failed');
+            }
             
-            // Update admin list
-            let allRegistrants = JSON.parse(localStorage.getItem('allRegistrants')) || [];
-            allRegistrants.push({ ...formData, id: userId });
-            localStorage.setItem('allRegistrants', JSON.stringify(allRegistrants));
-        
+            const data = await response.json();
+            const userId = data.id;
+            
             // Generate QR Code URL
-            const vercelUrl = "https://megacarepharmacy-register.vercel.app";
-            const detailsUrl = `${vercelUrl}/registrant_details.html?id=${userId}`;
+            const detailsUrl = `${API_BASE_URL}/registrant_details.html?id=${userId}`;
             const qrCodeUrl = `https://api.qrcode-monkey.com/qr/custom?size=300&data=${encodeURIComponent(detailsUrl)}`;
             
             globalDownloadLink = document.createElement('a');

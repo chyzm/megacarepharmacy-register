@@ -129,19 +129,31 @@
         document.addEventListener('DOMContentLoaded', function() {
             const registrantsTableBody = document.getElementById('registrantsTable').getElementsByTagName('tbody')[0];
             const exportCsvBtn = document.getElementById('exportCsvBtn');
-            const allRegistrantsDataString = localStorage.getItem('allRegistrants');
-            let allRegistrants = allRegistrantsDataString ? JSON.parse(allRegistrantsDataString) : [];
-
-            function populateTable() {
+        
+            async function fetchRegistrants() {
+                try {
+                    const response = await fetch(`${window.location.origin}/api/registrants`);
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch registrants');
+                    }
+                    
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error:', error);
+                    return [];
+                }
+            }
+        
+            async function populateTable() {
                 registrantsTableBody.innerHTML = ''; // Clear existing rows
-
-                // Sort by date (assuming each registrant object has a 'registrationDate' field)
-                allRegistrants.sort((a, b) => new Date(b.registrationDate) - new Date(a.registrationDate));
-
+        
+                const allRegistrants = await fetchRegistrants();
+        
                 if (allRegistrants.length > 0) {
-                    allRegistrants.forEach((registrant, index) => {
+                    allRegistrants.forEach((registrant) => {
                         const row = registrantsTableBody.insertRow();
-
+        
                         const dateCell = row.insertCell();
                         const firstNameCell = row.insertCell();
                         const lastNameCell = row.insertCell();
@@ -150,7 +162,7 @@
                         const companyCell = row.insertCell();
                         const printCell = row.insertCell();
                         const deleteCell = row.insertCell();
-
+        
                         const registrationDate = new Date(registrant.registrationDate);
                         const formattedDate = registrationDate.toLocaleDateString() + ' ' + registrationDate.toLocaleTimeString();
                         dateCell.textContent = formattedDate;
@@ -159,18 +171,33 @@
                         emailCell.textContent = registrant.email;
                         mobileCell.textContent = registrant.mobile;
                         companyCell.textContent = registrant.company;
-
+        
                         const printLink = document.createElement('a');
                         printLink.href = `print_qr_sticker.html?data=${encodeURIComponent(JSON.stringify(registrant))}`;
                         printLink.textContent = 'Print QR Code';
                         printLink.target = '_blank';
                         printCell.appendChild(printLink);
-
+        
                         const deleteButton = document.createElement('button');
                         deleteButton.textContent = 'Delete';
                         deleteButton.classList.add('delete-btn');
-                        deleteButton.addEventListener('click', function() {
-                            deleteRegistrant(index);
+                        deleteButton.addEventListener('click', async function() {
+                            if (confirm('Are you sure you want to delete this registrant?')) {
+                                try {
+                                    const response = await fetch(`${window.location.origin}/api/registrants/${registrant.id}`, {
+                                        method: 'DELETE'
+                                    });
+                                    
+                                    if (response.ok) {
+                                        row.remove();
+                                    } else {
+                                        throw new Error('Failed to delete registrant');
+                                    }
+                                } catch (error) {
+                                    console.error('Error:', error);
+                                    alert('Failed to delete registrant');
+                                }
+                            }
                         });
                         deleteCell.appendChild(deleteButton);
                     });
@@ -181,51 +208,22 @@
                     noDataCell.textContent = 'No registration data found.';
                 }
             }
-
-            function deleteRegistrant(index) {
-                if (confirm('Are you sure you want to delete this registrant?')) {
-                    allRegistrants.splice(index, 1);
-                    localStorage.setItem('allRegistrants', JSON.stringify(allRegistrants));
-                    populateTable();
-                }
-            }
-
-            // Automatically generate registration date if it's missing
-            allRegistrants = allRegistrants.map(registrant => ({
-                ...registrant,
-                registrationDate: registrant.registrationDate || new Date().toISOString()
-            }));
-            localStorage.setItem('allRegistrants', JSON.stringify(allRegistrants));
-
-            populateTable(); // Initial population
-
-            // Listen for new registrations from the index page (if it updates localStorage)
-            window.addEventListener('storage', function(event) {
-                if (event.key === 'allRegistrants') {
-                    allRegistrants = JSON.parse(event.newValue) || [];
-                    // Ensure new registrations have a registrationDate
-                    allRegistrants = allRegistrants.map(reg => ({
-                        ...reg,
-                        registrationDate: reg.registrationDate || new Date().toISOString()
-                    }));
-                    localStorage.setItem('allRegistrants', JSON.stringify(allRegistrants));
-                    populateTable();
-                }
-            });
-
-            exportCsvBtn.addEventListener('click', function() {
+        
+            exportCsvBtn.addEventListener('click', async function() {
+                const allRegistrants = await fetchRegistrants();
+                
                 if (allRegistrants.length === 0) {
                     alert('No data to export.');
                     return;
                 }
-
+        
                 const csvRows = [];
                 const headers = ['Date', 'First Name', 'Last Name', 'Email', 'Mobile', 'Company'];
                 csvRows.push(headers.join(','));
-
+        
                 allRegistrants.forEach(registrant => {
                     const registrationDate = new Date(registrant.registrationDate);
-                    const formattedDate = registrationDate.toISOString(); // Use ISO format
+                    const formattedDate = registrationDate.toISOString();
                     const values = [
                         formattedDate,
                         registrant.firstName,
@@ -243,7 +241,7 @@
                     });
                     csvRows.push(values.join(','));
                 });
-
+        
                 const csvString = csvRows.join('\n');
                 const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
@@ -255,6 +253,8 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             });
+        
+            populateTable();
         });
     </script>
 </body>

@@ -107,107 +107,106 @@
         const detailsContainer = document.getElementById('details-container');
         const qrCodeContainer = document.getElementById('qr-code-container');
         const downloadBtn = document.getElementById('downloadBtn');
-
+    
         // Simple ID validation
         if (!userId || !userId.startsWith('reg-')) {
             showError("Invalid registration ID. Please scan a valid QR code.");
             return;
         }
-
-        try {
-            // Get data from localStorage
-            const registrantData = JSON.parse(localStorage.getItem(userId));
-            
-            if (!registrantData) {
-                throw new Error('Registration not found');
-            }
-
-            // Display registrant details
-            detailsContainer.innerHTML = `
-                <div class="detail-item">
-                    <span class="detail-label">First Name:</span>
-                    <span class="detail-value">${registrantData.firstName || 'Not provided'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Last Name:</span>
-                    <span class="detail-value">${registrantData.lastName || 'Not provided'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Email:</span>
-                    <span class="detail-value">${registrantData.email || 'Not provided'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Whatsapp Number:</span>
-                    <span class="detail-value">${registrantData.mobile || 'Not provided'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Job Title:</span>
-                    <span class="detail-value">${registrantData.jobTitle || 'Not provided'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Company:</span>
-                    <span class="detail-value">${registrantData.company || 'Not provided'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">City:</span>
-                    <span class="detail-value">${registrantData.city || 'Not provided'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Country:</span>
-                    <span class="detail-value">${registrantData.country || 'Not provided'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Submission Time:</span>
-                    <span class="detail-value">${
-                        registrantData.submissionTime || 
-                        (registrantData.registrationDate ? 
-                            new Date(registrantData.registrationDate).toLocaleString() : 
-                            'Unknown')
-                    }</span>
-                </div>
+    
+        async function fetchRegistrantData() {
+            try {
+                const response = await fetch(`${window.location.origin}/api/registrants/${userId}`);
                 
-            `;
-
-            // Generate and display QR code
-            const currentUrl = window.location.href;
-            const qrCodeUrl = `https://api.qrcode-monkey.com/qr/custom?size=200&data=${encodeURIComponent(currentUrl)}`;
-            
-            const qrCodeImg = document.createElement('img');
-            qrCodeImg.src = qrCodeUrl;
-            qrCodeImg.alt = "Registration QR Code";
-            qrCodeImg.className = "img-fluid";
-            document.getElementById('qrcode').appendChild(qrCodeImg);
-            
-            // Setup download button
-            downloadBtn.addEventListener('click', () => {
-                const a = document.createElement('a');
-                a.href = qrCodeUrl;
-                a.download = `registration-${userId}.png`;
-                a.click();
-            });
-
-            qrCodeContainer.classList.remove('d-none');
-
-        } catch (error) {
-            console.error('Error:', error);
-            showError(`
-                ${error.message || 'Failed to load registration data'}<br>
-                Please contact support with this ID: ${userId}
-            `);
+                if (!response.ok) {
+                    throw new Error('Registration not found');
+                }
+                
+                const registrantData = await response.json();
+    
+                // Display registrant details
+                detailsContainer.innerHTML = `
+                    <div class="detail-item">
+                        <span class="detail-label">First Name:</span>
+                        <span class="detail-value">${registrantData.firstName || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Last Name:</span>
+                        <span class="detail-value">${registrantData.lastName || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Email:</span>
+                        <span class="detail-value">${registrantData.email || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Whatsapp Number:</span>
+                        <span class="detail-value">${registrantData.mobile || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Job Title:</span>
+                        <span class="detail-value">${registrantData.jobTitle || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Company:</span>
+                        <span class="detail-value">${registrantData.company || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">City:</span>
+                        <span class="detail-value">${registrantData.city || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Country:</span>
+                        <span class="detail-value">${registrantData.country || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Submission Time:</span>
+                        <span class="detail-value">${new Date(registrantData.submissionTime).toLocaleString()}</span>
+                    </div>
+                `;
+    
+                // Generate and display QR code
+                const currentUrl = window.location.href;
+                const qrCodeUrl = `https://api.qrcode-monkey.com/qr/custom?size=200&data=${encodeURIComponent(currentUrl)}`;
+                
+                const qrCodeImg = document.createElement('img');
+                qrCodeImg.src = qrCodeUrl;
+                qrCodeImg.alt = "Registration QR Code";
+                qrCodeImg.className = "img-fluid";
+                document.getElementById('qrcode').appendChild(qrCodeImg);
+                
+                // Setup download button
+                downloadBtn.addEventListener('click', () => {
+                    const a = document.createElement('a');
+                    a.href = qrCodeUrl;
+                    a.download = `registration-${userId}.png`;
+                    a.click();
+                });
+    
+                qrCodeContainer.classList.remove('d-none');
+    
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`
+                    ${error.message || 'Failed to load registration data'}<br>
+                    Please contact support with this ID: ${userId}
+                `);
+            }
         }
+    
+        function showError(message) {
+            const detailsContainer = document.getElementById('details-container');
+            detailsContainer.innerHTML = `
+                <div class="error-message">
+                    <p>${message}</p>
+                    <button onclick="location.href='index.html'" class="btn btn-outline-primary mt-3">
+                        <i class="fas fa-home me-2"></i>Return to Registration
+                    </button>
+                </div>
+            `;
+        }
+    
+        fetchRegistrantData();
     });
-
-    function showError(message) {
-        const detailsContainer = document.getElementById('details-container');
-        detailsContainer.innerHTML = `
-            <div class="error-message">
-                <p>${message}</p>
-                <button onclick="location.href='index.html'" class="btn btn-outline-primary mt-3">
-                    <i class="fas fa-home me-2"></i>Return to Registration
-                </button>
-            </div>
-        `;
-    }
 </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 </body>
