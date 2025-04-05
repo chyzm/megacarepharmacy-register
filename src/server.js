@@ -5,23 +5,74 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+// Environment detection
+const isProduction = process.env.NODE_ENV === 'production';
+const isRender = process.env.RENDER === 'true';
+
+// Database configuration
+const poolConfig = {
+  connectionString: process.env.DATABASE_URL
+};
+
+if (isProduction || isRender) {
+  poolConfig.ssl = { 
+    rejectUnauthorized: false 
+  };
+}
+
+const pool = new Pool(poolConfig);
+
+// Test database connection on startup
+(async () => {
+  try {
+    const client = await pool.connect();
+    console.log('✅ Database connected successfully');
+    client.release();
+  } catch (err) {
+    console.error('❌ Database connection error:', err.stack);
+    process.exit(1);
+  }
+})();
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname)));
+
+// Static file serving with proper cache headers
+app.use(express.static(path.join(__dirname), {
+  maxAge: isProduction ? '1y' : '0',
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
+
+// Assets directory
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // API Routes
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy',
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
 
 // 1. Create new registrant
 app.post('/api/registrants', async (req, res) => {
   try {
-    const { firstName, lastName, email, mobile, jobTitle, company, city, country } = req.body;
+    const { 
+      firstName, lastName, email, mobile, 
+      jobTitle, company, city, country 
+    } = req.body;
+
+    // Input validation
+    if (!firstName || !email || !mobile) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
 
     const result = await pool.query(
       `INSERT INTO registrants (
@@ -48,122 +99,60 @@ app.post('/api/registrants', async (req, res) => {
     res.status(201).json(registrant);
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// 2. Get registrant details
-app.get('/api/registrants/:id', async (req, res) => {
-  try {
-    const id = req.params.id.replace('reg-', '');
-    const result = await pool.query(
-      `SELECT * FROM registrants WHERE id = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Registrant not found' });
-    }
-
-    const registrant = result.rows[0];
-    res.json({
-      firstName: registrant.first_name,
-      lastName: registrant.last_name,
-      email: registrant.email,
-      mobile: registrant.mobile,
-      jobTitle: registrant.job_title,
-      company: registrant.company,
-      city: registrant.city,
-      country: registrant.country,
-      submissionTime: registrant.created_at
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: isProduction ? null : error.message
     });
-  } catch (error) {
-    console.error('Fetch error:', error);
-    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// 3. Get all registrants (for admin)
-app.get('/api/registrants', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT 
-        id, first_name, last_name, email, mobile, 
-        company, created_at 
-       FROM registrants 
-       ORDER BY created_at DESC`
-    );
+// [Keep all your other existing routes unchanged...]
 
-    res.json(result.rows.map(row => ({
-      id: `reg-${row.id}`,
-      firstName: row.first_name,
-      lastName: row.last_name,
-      email: row.email,
-      mobile: row.mobile,
-      company: row.company,
-      registrationDate: row.created_at
-    })));
-  } catch (error) {
-    console.error('Fetch all error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// 4. Delete registrant (admin only)
-app.delete('/api/registrants/:id', async (req, res) => {
-  try {
-    const id = req.params.id.replace('reg-', '');
-    await pool.query(
-      `DELETE FROM registrants WHERE id = $1`,
-      [id]
-    );
-    res.status(204).end();
-  } catch (error) {
-    console.error('Delete error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Admin authentication
-app.post('/api/auth/login', (req, res) => {
-  const { password } = req.body;
-  if (password === process.env.ADMIN_PASSWORD) {
-    res.json({ success: true });
-  } else {
-    res.status(401).json({ error: 'Invalid credentials' });
-  }
-});
-
-// Serve HTML files
-const validPages = [
+// HTML file serving with proper error handling
+const validPages = new Set([
   'index.html',
   'registrant_details.html',
   'print_qr_sticker.html',
   'admin.html',
   'login.html'
-];
+]);
 
-app.get('*', (req, res) => {
+app.get('*', (req, res, next) => {
   const requestedPage = req.path.split('/').pop();
   
-  if (validPages.includes(requestedPage)) {
-    res.sendFile(path.join(__dirname, requestedPage));
+  if (validPages.has(requestedPage)) {
+    res.sendFile(path.join(__dirname, requestedPage), err => {
+      if (err) {
+        console.error('File serving error:', err);
+        next(err);
+      }
+    });
   } else if (req.path.startsWith('/assets/')) {
-    // Allow asset files to be served
-    res.sendFile(path.join(__dirname, req.path));
+    next(); // Let static middleware handle it
   } else {
     res.status(404).sendFile(path.join(__dirname, 'index.html'));
   }
 });
 
-// Error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something broke!' });
+  console.error('Global error:', err.stack);
+  res.status(500).json({ 
+    error: 'Internal server error',
+    details: isProduction ? null : err.message
+  });
 });
 
-// Start server
+// Server startup
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 Database: ${poolConfig.connectionString ? 'Configured' : 'Missing'}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  await pool.end();
+  process.exit(0);
 });
