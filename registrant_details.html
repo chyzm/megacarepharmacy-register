@@ -30,14 +30,16 @@
             padding-bottom: 15px;
             border-bottom: 1px solid #eee;
             display: flex;
+            flex-wrap: wrap;
         }
         .detail-label {
             font-weight: bold;
-            min-width: 120px;
+            min-width: 150px;
             color: #3498db;
         }
         .detail-value {
             flex: 1;
+            min-width: 200px;
         }
         .error-message {
             color: #e74c3c;
@@ -56,6 +58,25 @@
             margin-top: 20px;
             width: 100%;
         }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .container, .container * {
+                visibility: visible;
+            }
+            .container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                box-shadow: none;
+                padding: 0;
+            }
+            .btn-print {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -67,50 +88,40 @@
         <div id="qr-code-container" class="qr-code-container d-none">
             <h3>Your Registration QR Code</h3>
             <div id="qrcode"></div>
-            <button class="btn btn-primary btn-print" onclick="window.print()">Print Details</button>
+            <div class="d-flex gap-2 mt-3">
+                <button class="btn btn-primary flex-grow-1" onclick="window.print()">
+                    <i class="fas fa-print me-2"></i>Print
+                </button>
+                <button id="downloadBtn" class="btn btn-success flex-grow-1">
+                    <i class="fas fa-download me-2"></i>Download
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', async function () {
             const urlParams = new URLSearchParams(window.location.search);
             const userId = urlParams.get('id');
             const detailsContainer = document.getElementById('details-container');
             const qrCodeContainer = document.getElementById('qr-code-container');
-
-            // Debug output
-            console.log('URL Parameters:', urlParams.toString());
-            console.log('User ID from URL:', userId);
-            console.log('All localStorage keys:', Object.keys(localStorage));
+            const downloadBtn = document.getElementById('downloadBtn');
 
             if (!userId) {
-                detailsContainer.innerHTML = `
-                    <div class="error-message">
-                        <p>No registration ID found in the URL.</p>
-                        <p>Please scan your QR code again or contact support.</p>
-                    </div>
-                `;
+                showError("No registration ID found in URL. Please scan your QR code again.");
                 return;
             }
 
             try {
-                const registrantData = JSON.parse(localStorage.getItem(userId));
+                // Fetch data from server
+                const response = await fetch(`/api/registrant?id=${userId}`);
                 
-                if (!registrantData) {
-                    detailsContainer.innerHTML = `
-                        <div class="error-message">
-                            <p>Registration data not found for ID: ${userId}</p>
-                            <p>This may happen if:</p>
-                            <ul>
-                                <li>You're using a different browser or device</li>
-                                <li>Your browser data was cleared</li>
-                                <li>The QR code was generated on a different domain</li>
-                            </ul>
-                            <p>Please contact support for assistance.</p>
-                        </div>
-                    `;
-                    return;
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to fetch data');
                 }
+
+                const registrantData = await response.json();
 
                 // Display registrant details
                 detailsContainer.innerHTML = `
@@ -148,54 +159,51 @@
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Registration Date:</span>
-                        <span class="detail-value">${new Date(registrantData.registrationDate).toLocaleString() || 'Unknown'}</span>
+                        <span class="detail-value">${registrantData.registrationDate ? new Date(registrantData.registrationDate).toLocaleString() : 'Unknown'}</span>
                     </div>
                 `;
 
-                // Generate QR code for the current URL
+                // Generate QR code
                 const currentUrl = window.location.href;
+                const qrCodeUrl = `https://api.qrcode-monkey.com/qr/custom?size=200&data=${encodeURIComponent(currentUrl)}`;
+                
                 const qrCodeImg = document.createElement('img');
-                qrCodeImg.src = `https://api.qrcode-monkey.com/qr/custom?size=200&data=${encodeURIComponent(currentUrl)}`;
+                qrCodeImg.src = qrCodeUrl;
                 qrCodeImg.alt = "Registration QR Code";
                 qrCodeImg.className = "img-fluid";
                 document.getElementById('qrcode').appendChild(qrCodeImg);
+                
+                // Setup download button
+                downloadBtn.addEventListener('click', () => {
+                    const a = document.createElement('a');
+                    a.href = qrCodeUrl;
+                    a.download = `registration-${userId}.png`;
+                    a.click();
+                });
+
                 qrCodeContainer.classList.remove('d-none');
 
             } catch (error) {
-                console.error('Error loading registration data:', error);
-                detailsContainer.innerHTML = `
-                    <div class="error-message">
-                        <p>An error occurred while loading registration data.</p>
-                        <p>Technical details: ${error.message}</p>
-                        <p>Please contact support and provide the following ID: ${userId}</p>
-                    </div>
-                `;
+                console.error('Error:', error);
+                showError(`
+                    ${error.message || 'Failed to load registration data'}<br>
+                    Please contact support with this ID: ${userId}
+                `);
             }
         });
 
-        // Print styling
-        const style = document.createElement('style');
-        style.innerHTML = `
-            @media print {
-                body * {
-                    visibility: hidden;
-                }
-                .container, .container * {
-                    visibility: visible;
-                }
-                .container {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
-                    box-shadow: none;
-                }
-                .btn-print {
-                    display: none;
-                }
-            }
-        `;
-        document.head.appendChild(style);
+        function showError(message) {
+            const detailsContainer = document.getElementById('details-container');
+            detailsContainer.innerHTML = `
+                <div class="error-message">
+                    <p>${message}</p>
+                    <button onclick="location.href='index.html'" class="btn btn-outline-primary mt-3">
+                        <i class="fas fa-home me-2"></i>Return to Registration
+                    </button>
+                </div>
+            `;
+        }
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 </body>
 </html>

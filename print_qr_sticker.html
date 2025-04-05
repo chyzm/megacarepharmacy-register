@@ -2,8 +2,29 @@
 <html lang="en">
 <head>
     <style>
-        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        #qrcode { /* Adjust styles for 80mm sticker width */ width: 76mm; height: auto; }
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: auto; /* Adjust for content height */
+            background-color: #fff; /* Ensure white background for printing */
+        }
+
+        #qrcode {
+            width: 76mm; /* Match sticker width */
+            height: auto; /* Adjust height based on content */
+            margin: 0; /* Remove any default margins */
+        }
+
+        @media print {
+            body {
+                min-height: auto; /* Ensure content fits on the printed page */
+                margin: 0;
+                padding: 0;
+            }
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
@@ -18,16 +39,22 @@
             if (registrantDataString) {
                 const registrantData = JSON.parse(registrantDataString);
                 const qrcodeDiv = document.getElementById('qrcode');
+
+                // Calculate a suitable pixel size based on 80mm width and desired DPI
+                const stickerWidthMM = 76; // Use slightly less for margins
+                const dpi = 203; // Common thermal printer DPI (adjust if needed)
+                const qrCodeSizePixels = Math.floor((stickerWidthMM / 25.4) * dpi);
+
                 new QRCode(qrcodeDiv, {
                     text: JSON.stringify(registrantData),
-                    width: 300, // Adjust width as needed for the sticker
-                    height: 300, // Adjust height as needed
+                    width: qrCodeSizePixels,
+                    height: qrCodeSizePixels,
                     colorDark: "#000000",
                     colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.L
+                    correctLevel: QRCode.CorrectLevel.M // Consider Medium for better readability
                 });
             } else {
-                document.body.innerHTML = '<p>No data to generate QR code.</p>';
+                document.body.innerHTML = ''; // Remove "No data" message for printing
             }
         });
     </script>
