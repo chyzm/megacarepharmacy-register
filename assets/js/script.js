@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
             allRegistrants.push({ ...formData, id: userId });
             localStorage.setItem('allRegistrants', JSON.stringify(allRegistrants));
     
-            const vercelUrl = "http://127.0.0.1:5502/index.html";
+            const vercelUrl = "https://megacarepharmacy-register.vercel.app/";
             const detailsUrl = `${vercelUrl}registrant_details.html?id=${userId}`;
             const qrCodeUrl = `https://api.qrcode-monkey.com/qr/custom?size=300&data=${encodeURIComponent(detailsUrl)}`;
             
